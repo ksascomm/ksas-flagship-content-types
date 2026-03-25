@@ -3,7 +3,7 @@
  * Plugin Name: Krieger Flagship Content Types
  * Plugin URI: http://krieger.jhu.edu/
  * Description: Modernized for 2026. Manages Fields of Study using ACF Local Fields.
- * Version: 3.0
+ * Version: 3.1
  * Author: KSAS Communications
  * License: GPL2
  *
@@ -130,9 +130,10 @@ add_action(
 		// Academic Details.
 		acf_add_local_field_group(
 			array(
-				'key'      => 'group_study_academic',
-				'title'    => 'Academic Details',
-				'fields'   => array(
+				'key'          => 'group_study_academic',
+				'title'        => 'Academic Details',
+				'show_in_rest' => true,
+				'fields'       => array(
 					array(
 						'label' => 'Majors',
 						'name'  => 'ecpt_majors',
@@ -158,7 +159,7 @@ add_action(
 						'key'   => 'field_study_alt_text',
 					),
 				),
-				'location' => array(
+				'location'     => array(
 					array(
 						array(
 							'param'    => 'post_type',
@@ -198,9 +199,10 @@ add_action(
 		// Content & Media Group.
 		acf_add_local_field_group(
 			array(
-				'key'      => 'group_study_content',
-				'title'    => 'Content & Media',
-				'fields'   => array(
+				'key'          => 'group_study_content',
+				'title'        => 'Content & Media',
+				'show_in_rest' => true,
+				'fields'       => array(
 					array(
 						'label' => 'Headline',
 						'name'  => 'ecpt_headline',
@@ -214,7 +216,7 @@ add_action(
 						'key'   => 'f_study_key',
 					),
 				),
-				'location' => array(
+				'location'     => array(
 					array(
 						array(
 							'param'    => 'post_type',
@@ -292,8 +294,36 @@ add_action(
 				'label_placement'       => 'top',
 				'instruction_placement' => 'label',
 				'active'                => true,
-				'show_in_rest'          => 0,
+				'show_in_rest'          => true,
 			)
 		);
 	}
 );
+
+/**
+ * 4. Hide specific Study Field post from frontend while keeping it in the API.
+ *
+ * @param WP_Query $query The query object.
+ */
+function ksas_hide_specific_study_field( $query ) {
+	// 1. Exit if we're in the admin or if it's an API request.
+	if ( is_admin() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
+		return;
+	}
+
+	// 2. Ensure we are targeting the main query.
+	if ( $query->is_main_query() ) {
+
+		// CASE A: Hide from lists/archives.
+		// We use the ID to be safe. Change '123' to the actual ID of that post.
+		$query->set( 'post__not_in', array( 18540 ) );
+
+		// CASE B: If someone visits the URL directly, force a 404.
+		if ( is_singular( 'studyfields' ) && 'compthoughtlit-dept' === $query->get( 'name' ) ) {
+			$query->set_404();
+			status_header( 404 );
+			nocache_headers();
+		}
+	}
+}
+add_action( 'pre_get_posts', 'ksas_hide_specific_study_field' );
